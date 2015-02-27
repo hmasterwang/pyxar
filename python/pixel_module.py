@@ -302,7 +302,7 @@ class Roc(object):
     def ph_par0(self):
         return self._ph_par0
 
-    @ph_par2.setter
+    @ph_par0.setter
     def ph_par0(self, set_data):
         self._ph_par0 = set_data
 
