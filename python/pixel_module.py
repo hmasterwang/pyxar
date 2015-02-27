@@ -4,6 +4,7 @@ import logging
 import numpy
 import ROOT
 import random
+import math
 
 class Pixel(object):
 
@@ -14,9 +15,10 @@ class Pixel(object):
         self.trim = trim
         self.active = False
         self._data = None
-        self._ph_fit_slope = False
-        self._ph_fit_offset = False
+        self._ph_fit_par0 = False
+        self._ph_fit_par1 = False
         self._ph_fit_par2 = False
+        self._ph_fit_par3 = False
 
     @property
     def col(self):
@@ -149,14 +151,17 @@ class Roc(object):
         n_rocs = eval(config.get('Module','rocs'))
         self._ph_array = [0]
         self._ph_cal_array = [0]
+        self._ph_par0 = numpy.zeros(shape)
+        self._ph_par1 = numpy.zeros(shape)
         self._ph_par2 = numpy.zeros(shape)
-        self._ph_slope = numpy.zeros(shape)
-        self._ph_offset = numpy.zeros(shape)
+        self._ph_par3 = numpy.zeros(shape)
         for col in range(51):
             for row in range(79):
+                self._ph_par0[col][row] = None
+                self._ph_par1[col][row] = None
                 self._ph_par2[col][row] = None
-                self._ph_slope[col][row] = None
-                self._ph_offset[col][row] = None
+                self._ph_par3[col][row] = None
+
         self._work_dir = config.get('General','work_dir')
 
         try:
@@ -292,23 +297,23 @@ class Roc(object):
     @ph_cal_array.setter
     def ph_cal_array(self, set_data):
         self._ph_cal_array = set_data
-    
-    @property
-    def ph_slope(self):
-        return self._ph_slope
-
-    @ph_slope.setter
-    def ph_slope(self, set_data):
-        self._ph_slope = set_data
  
     @property
-    def ph_offset(self):
-        return self._ph_offset
+    def ph_par0(self):
+        return self._ph_par0
 
-    @ph_offset.setter
-    def ph_offset(self, set_data):
-        self._ph_offset = set_data
- 
+    @ph_par2.setter
+    def ph_par0(self, set_data):
+        self._ph_par0 = set_data
+
+    @property
+    def ph_par1(self):
+        return self._ph_par1
+
+    @ph_par1.setter
+    def ph_par1(self, set_data):
+        self._ph_par1 = set_data
+        
     @property
     def ph_par2(self):
         return self._ph_par2
@@ -316,8 +321,14 @@ class Roc(object):
     @ph_par2.setter
     def ph_par2(self, set_data):
         self._ph_par2 = set_data
- 
+        
+    @property
+    def ph_par3(self):
+        return self._ph_par3
 
+    @ph_par3.setter
+    def ph_par3(self, set_data):
+        self._ph_par3 = set_data
 
     @property
     def n_rows(self):
@@ -402,9 +413,10 @@ class Roc(object):
         try:
             self.phCalibrationFile = open('%s/phCalibration_C%s.dat' %(self._work_dir, self.number))
             shape = (self._n_cols, self._n_rows)
+            par0_array = numpy.zeros(shape)
+            par1_array = numpy.zeros(shape)
             par2_array = numpy.zeros(shape)
-            slope_array = numpy.zeros(shape)
-            offset_array = numpy.zeros(shape)
+            par3_array = numpy.zeros(shape)
             #skip first 4 lines of PhCalibration data file
             header1 = self.phCalibrationFile.readline()
             header2 = self.phCalibrationFile.readline()
@@ -423,40 +435,42 @@ class Roc(object):
                 col = entries[11]
                 row = entries[12]
                 lf = ROOT.TLinearFitter(1)
-                lf.SetFormula("pol2")
+                lf.SetFormula("[0]+[1]*tanh([2]*x+[3])")
                 lf.AssignData(n, 1, numpy.array(x), numpy.array(y))
                 return_value = lf.Eval()
                 if return_value != 0:
                     self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%i,%i)' %self.number,col,row)
+                par0 = lf.GetParameter(0)
+                par1 = lf.GetParameter(1)
                 par2 = lf.GetParameter(2)
-                slope = lf.GetParameter(1)
-                offset = lf.GetParameter(0)
+                par3 = lf.GetParameter(3)
                 #TODO: give warning if chi2 is too large
+                par0_array[col,row] = par0
+                par1_array[col,row] = par1
                 par2_array[col,row] = par2
-                slope_array[col,row] = slope
-                offset_array[col,row] = offset 
+                par3_array[col,row] = par3
+
             self.phCalibrationFile.close()
-            return slope_array, offset_array, par2_array
+            return par0_array, par1_array, par2_array, par3_array
 
         except IOError:
             self.phCalibrationFile = None
             self.logger.warning('could not open phCalibration file for ROC %i:' %self.number)
 
     #convert PH in ADC to Vcal units
-    def ADC_to_Vcal(self, col, row, ph, slopes, offsets, par2s):
+    def ADC_to_Vcal(self, col, row, ph, par0s, par1s, par2s, par3s):
+        '''
+        par[0]+par[1]*tanh(par[2]*x[0]+par[3])
+        '''
         ph = ph + (random.random()-0.5)
+        self.pixel(col,row)._ph_fit_par0 = par0s[col][row]
+        self.pixel(col,row)._ph_fit_par1 = par1s[col][row]
         self.pixel(col,row)._ph_fit_par2 = par2s[col][row]
-        self.pixel(col,row)._ph_fit_slope = slopes[col][row]
-        self.pixel(col,row)._ph_fit_offset = offsets[col][row]
-        if self.pixel(col,row)._ph_fit_slope == None or self.pixel(col,row)._ph_fit_offset == None or self.pixel(col,row)._ph_fit_par2 == 0:
-            return 0
-        else:
-            if self.pixel(col,row)._ph_fit_par2 > 0:
-                #ph_cal = (ph - self.pixel(col,row)._ph_fit_offset)/(self.pixel(col,row)._ph_fit_slope)
-                ph_cal = ((-self.pixel(col,row)._ph_fit_slope + (self.pixel(col,row)._ph_fit_slope**2 - 4 * self.pixel(col,row)._ph_fit_par2 * (self.pixel(col,row)._ph_fit_offset - ph))**0.5)/(2 * self.pixel(col,row)._ph_fit_par2))
-            else:
-                ph_cal = ((-self.pixel(col,row)._ph_fit_slope - (self.pixel(col,row)._ph_fit_slope**2 - 4 * self.pixel(col,row)._ph_fit_par2 * (self.pixel(col,row)._ph_fit_offset - ph))**0.5)/(2 * self.pixel(col,row)._ph_fit_par2))
-            return ph_cal
+        self.pixel(col,row)._ph_fit_par3 = par3s[col][row]
+        
+        ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
+
+        return ph_cal
 
 class TBM(object):
     def __init__(self,config,number=0):
