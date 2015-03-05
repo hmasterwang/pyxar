@@ -431,7 +431,7 @@ class Roc(object):
                 line = line.strip()
                 entries = line.split()
                 y = entries[:n]
-                values = zip(x, y)
+                values = zip(map(float, x), map(float, y))
 
                 col = entries[11]
                 row = entries[12]
