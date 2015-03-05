@@ -427,10 +427,12 @@ class Roc(object):
             n=10 #keep the first n Vcal points for fitting
             line_number=0
             x=[50.,100.,150.,200.,250.,210.,350.,490.,630.,1400.]   # High range added
+            coefficient=[1,1,1,1,1,7,7,7,7,7]
             for line in self.phCalibrationFile:
                 line = line.strip()
                 entries = line.split()
                 y = entries[:n]
+                y = map(mul, coefficient, y)
                 values = zip(map(float, x), map(float, y))
 
                 col = entries[11]
@@ -478,7 +480,7 @@ class Roc(object):
             return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
-
+        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
         return ph_cal
 
 class TBM(object):
