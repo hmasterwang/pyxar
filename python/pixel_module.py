@@ -443,8 +443,8 @@ class Roc(object):
                 fittingFunc.SetParameters(400,300,0.00004,-0.1)
                 return_value = histo.Fit(fittingFunc)
                 
-                if return_value != 0:
-                    self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%s,%s)' %self.number,col,row)
+                if return_value == 0:
+                    self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%s,%s)' %(self.number,col,row))
                 par0 = fittingFunc.GetParameter(0)
                 par1 = fittingFunc.GetParameter(1)
                 par2 = fittingFunc.GetParameter(2)
