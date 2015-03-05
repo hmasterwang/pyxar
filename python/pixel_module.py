@@ -424,26 +424,32 @@ class Roc(object):
             header4 = self.phCalibrationFile.readline()
 
             #loop over lines
-            n=5 #keep the first n Vcal points for fitting
+            n=10 #keep the first n Vcal points for fitting
             line_number=0
-            x=[50.,100.,150.,200.,250.]
+            x=[50.,100.,150.,200.,250.,210.,350.,490.,630.,1400.]   # High range added
             for line in self.phCalibrationFile:
                 line = line.strip()
                 entries = line.split()
-                y = numpy.array(entries[:n])
-                y = y.astype(float)
+                y = entries[:n]
+                values = zip(x, y)
+
                 col = entries[11]
                 row = entries[12]
-                lf = ROOT.TLinearFitter(1)
-                lf.SetFormula("[0]+[1]*tanh([2]*x+[3])")
-                lf.AssignData(n, 1, numpy.array(x), numpy.array(y))
-                return_value = lf.Eval()
+
+                histo = ROOT.TH1F('%s-%s' % (col, row), '%s-%s' % (col, row), 145, 0, 1450)
+                for value in values:
+                    histo.Fill(value[0], value[1])
+                fittingFunc = ROOT.TF1('%s-%s' % (col, row), "[0] + [1]*tanh([2]*x + [3])")
+                fittingFunc.SetParameters(400,300,0.00004,-0.1)
+                return_value = histo.Fit(fittingFunc)
+                
                 if return_value != 0:
-                    self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%i,%i)' %self.number,col,row)
-                par0 = lf.GetParameter(0)
-                par1 = lf.GetParameter(1)
-                par2 = lf.GetParameter(2)
-                par3 = lf.GetParameter(3)
+                    self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%s,%s)' %self.number,col,row)
+                par0 = fittingFunc.GetParameter(0)
+                par1 = fittingFunc.GetParameter(1)
+                par2 = fittingFunc.GetParameter(2)
+                par3 = fittingFunc.GetParameter(3)
+                self.logger.debug('par0: %s, par1: %s, par2: %s, par3: %s' % (par0, par1, par2, par3))
                 #TODO: give warning if chi2 is too large
                 par0_array[col,row] = par0
                 par1_array[col,row] = par1
@@ -467,6 +473,9 @@ class Roc(object):
         self.pixel(col,row)._ph_fit_par1 = par1s[col][row]
         self.pixel(col,row)._ph_fit_par2 = par2s[col][row]
         self.pixel(col,row)._ph_fit_par3 = par3s[col][row]
+
+        if ph - self.pixel(col,row)._ph_fit_par0 > 1 or (ph - self.pixel(col,row)._ph_fit_par0) < -1:
+            return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
 
