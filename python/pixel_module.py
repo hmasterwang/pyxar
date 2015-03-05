@@ -5,6 +5,7 @@ import numpy
 import ROOT
 import random
 import math
+from operator import mul
 
 class Pixel(object):
 
