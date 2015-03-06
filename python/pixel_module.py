@@ -78,15 +78,16 @@ class Pixel(object):
 
     #convert PH in ADC to Vcal units
     def ADC_to_Vcal(self, ph):
-        if self._ph_fit_slope == False or self._ph_offset == False or self._ph_slope == 0 or self._ph_par2 == 0:
+        '''
+        par[0]+par[1]*tanh(par[2]*x[0]+par[3])
+        '''
+        if ph - self.pixel(col,row)._ph_fit_par0 > 1 or (ph - self.pixel(col,row)._ph_fit_par0) < -1:
+            self.logger.debug('par out of range. return.')
             return 0
-        else:
-            #ph_cal = (ph - self._ph_fit_offset)/(self._ph_fit_slope)
-            if self._ph_fit_par2 > 0:
-                ph_cal = ((-self._ph_fit_slope + (self._ph_fit_slope**2 - 4 * self._ph_fit_par2 * (self._ph_fit_offset - ph))**0.5) / (2 * self._ph_fit_par2))
-            else:
-                ph_cal = ((-self._ph_fit_slope - (self._ph_fit_slope**2 - 4 * self._ph_fit_par2 * (self._ph_fit_offset - ph))**0.5) / (2 * self._ph_fit_par2))
-            return ph_cal
+        
+        ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
+        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
+        return ph_cal
 
 
 class DAC(object):
@@ -478,10 +479,11 @@ class Roc(object):
         self.pixel(col,row)._ph_fit_par3 = par3s[col][row]
 
         if ph - self.pixel(col,row)._ph_fit_par0 > 1 or (ph - self.pixel(col,row)._ph_fit_par0) < -1:
+            self.logger.debug('par out of range. return.')
             return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
-        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
+        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
         return ph_cal
 
 class TBM(object):
