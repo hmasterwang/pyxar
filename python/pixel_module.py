@@ -82,11 +82,11 @@ class Pixel(object):
         par[0]+par[1]*tanh(par[2]*x[0]+par[3])
         '''
         if ph - self.pixel(col,row)._ph_fit_par0 > 1 or (ph - self.pixel(col,row)._ph_fit_par0) < -1:
-            self.logger.debug('par out of range. return.')
+            self.logger.debug('DUMMYpar out of range. return.')
             return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
-        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
+        self.logger.debug('DUMMYph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
         return ph_cal
 
 
@@ -426,10 +426,10 @@ class Roc(object):
             header4 = self.phCalibrationFile.readline()
 
             #loop over lines
-            n=10 #keep the first n Vcal points for fitting
+            n=5 #keep the first n Vcal points for fitting
             line_number=0
-            x=[50.,100.,150.,200.,250.,210.,350.,490.,630.,1400.]   # High range added
-            coefficient=[1,1,1,1,1,1,1,1,1,1]
+            x=[50.,100.,150.,200.,250.,]   # High range added
+            coefficient=[1,1,1,1,1]
             for line in self.phCalibrationFile:
                 line = line.strip()
                 entries = line.split()
@@ -483,6 +483,10 @@ class Roc(object):
             return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
+        
+        if ph_cal < 0:
+            return 0
+
         self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
         return ph_cal
 
