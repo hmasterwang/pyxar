@@ -429,7 +429,7 @@ class Roc(object):
             n=10 #keep the first n Vcal points for fitting
             line_number=0
             x=[50.,100.,150.,200.,250.,210.,350.,490.,630.,1400.]   # High range added
-            coefficient=[1,1,1,1,1,7,7,7,7,7]
+            coefficient=[1,1,1,1,1,1,1,1,1,1]
             for line in self.phCalibrationFile:
                 line = line.strip()
                 entries = line.split()
@@ -478,7 +478,7 @@ class Roc(object):
         self.pixel(col,row)._ph_fit_par2 = par2s[col][row]
         self.pixel(col,row)._ph_fit_par3 = par3s[col][row]
 
-        if ph - self.pixel(col,row)._ph_fit_par0 > 1 or (ph - self.pixel(col,row)._ph_fit_par0) < -1:
+        if (ph-self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1 > 1 or (ph-self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1 < -1:
             self.logger.debug('par out of range. return.')
             return 0
         
