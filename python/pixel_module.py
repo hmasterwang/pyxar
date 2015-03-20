@@ -20,6 +20,7 @@ class Pixel(object):
         self._ph_fit_par1 = False
         self._ph_fit_par2 = False
         self._ph_fit_par3 = False
+        self.count = False
 
     @property
     def col(self):
@@ -428,24 +429,28 @@ class Roc(object):
             #loop over lines
             n=5 #keep the first n Vcal points for fitting
             line_number=0
-            x=[50.,100.,150.,200.,250.,]   # High range added
+            ##x=[50.,100.,150.,200.,250.,]   # High range added
+            x=[30.,50.,70.,90.,200.,]   # High range added
             coefficient=[1,1,1,1,1]
             for line in self.phCalibrationFile:
                 line = line.strip()
                 entries = line.split()
-                y = entries[:n]
+                ##y = entries[:n]
+                y = entries[5:10]
                 y = map(mul, coefficient, y)
                 values = zip(map(float, x), map(float, y))
 
                 col = entries[11]
                 row = entries[12]
 
-                histo = ROOT.TH1F('%s-%s' % (col, row), '%s-%s' % (col, row), 145, 0, 1450)
+                ROOT.Math.MinimizerOptions.SetDefaultMaxFunctionCalls(10000); 
+		histo = ROOT.TH1F('%s-%s' % (col, row), '%s-%s' % (col, row), 145, 0, 1450)
                 for value in values:
                     histo.Fill(value[0], value[1])
-                fittingFunc = ROOT.TF1('%s-%s' % (col, row), "[0] + [1]*tanh([2]*x + [3])")
-                fittingFunc.SetParameters(400,300,0.00004,-0.1)
-                return_value = histo.Fit(fittingFunc)
+                fittingFunc = ROOT.TF1('%s-%s' % (col, row), "[0] + [1]*tanh([2]*x + [3])", 0, 255)
+                #fittingFunc.SetParameters(400,300,0.00004,-0.1)
+                fittingFunc.SetParameters(200,-200,0.002,0.865)
+                return_value = histo.Fit(fittingFunc, "SRQ")
                 
                 if return_value == 0:
                     self.logger.debug('PhCalibration data fit failed in ROC %s pixel (%s,%s)' %(self.number,col,row))
@@ -453,7 +458,7 @@ class Roc(object):
                 par1 = fittingFunc.GetParameter(1)
                 par2 = fittingFunc.GetParameter(2)
                 par3 = fittingFunc.GetParameter(3)
-                self.logger.debug('par0: %s, par1: %s, par2: %s, par3: %s' % (par0, par1, par2, par3))
+                ##self.logger.debug('par0: %s, par1: %s, par2: %s, par3: %s' % (par0, par1, par2, par3))
                 #TODO: give warning if chi2 is too large
                 par0_array[col,row] = par0
                 par1_array[col,row] = par1
@@ -480,14 +485,16 @@ class Roc(object):
 
         if (ph-self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1 > 1 or (ph-self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1 < -1:
             self.logger.debug('par out of range. return.')
+            self.pixel(col,row).count+=1;
+            print self.pixel(col,row).count;
             return 0
         
         ph_cal = (math.atanh((ph - self.pixel(col,row)._ph_fit_par0)/self.pixel(col,row)._ph_fit_par1) - self.pixel(col,row)._ph_fit_par3)/self.pixel(col,row)._ph_fit_par2
-        
+        ph_cal = ph_cal*7 
         if ph_cal < 0:
             return 0
 
-        self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
+        #self.logger.debug('ph: %s, ph_cal: %s, col: %s, row: %s, par0: %s, par1: %s, par2: %s, par3: %s' % (ph, ph_cal, col, row, self.pixel(col,row)._ph_fit_par0, self.pixel(col,row)._ph_fit_par1, self.pixel(col,row)._ph_fit_par2, self.pixel(col,row)._ph_fit_par3))
         return ph_cal
 
 class TBM(object):

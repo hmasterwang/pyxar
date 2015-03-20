@@ -121,7 +121,8 @@ class Pretest(test.Test):
                             high_delta += 1
                         else:
                             high_delta = 0
-                        if high_delta == 3:
+                        ##if high_delta == 3:
+                        if high_delta == 10:
                             val -= (15*self.n_average)
                             self.tb.set_dac_roc(roc,self.dac1,val)
                             self.tb.m_delay(10)
@@ -131,12 +132,14 @@ class Pretest(test.Test):
         #determine calDel
         #activate pixel 5 5 in every ROC
         for roc in self.dut.rocs():
-            roc.pixel(5,5).active = True
+            ##roc.pixel(5,5).active = True
+            roc.pixel(30,30).active = True
         #do CalDel dac scan on all 16 pixels
         self.tb.get_dac_scan(10, self.dac2)
         #find CalDel value in the middle of efficiecy window
         for roc in self.dut.rocs():
-            cal_array = roc.pixel(5,5).data
+            ##cal_array = roc.pixel(5,5).data
+            cal_array = roc.pixel(30,30).data
             sum = 0.
             n = 0
             for idx,cal in enumerate(cal_array):
@@ -156,20 +159,22 @@ class Pretest(test.Test):
         '''Perform a DacDac scan in VthrComp and CalDel to find a working point.
         VthrComp is adjusted to half the noise cutoff. 
         CalDel is centered in the working range.'''
-        #TODO remove hardcoding of 5,5
+        #TODO remove hardcoding of 5,5 -- hardcoded 5,5 to 30,30 -  Mayur
         self.logger.info('Adjusting %s and %s' %(self.dac1, self.dac2))
         for roc in self.dut.rocs():
-            roc.pixel(5,5).active = True
+            ##roc.pixel(5,5).active = True
+            roc.pixel(30,30).active = True
         self.tb.get_dac_dac(self.n_triggers, self.dac1, self.dac2)
         cal_dels = []
         vthr_comps = []
         for roc in self.dut.rocs():
             # keep the tornados
-            plot_dict = {'title':'ROC_%s_Pix_(%s,%s)' %(roc.number,5,5),
-                                'x_title': self.x_title, 'y_title': self.y_title, 'data': roc.pixel(5,5).data}
+            ##plot_dict = {'title':'ROC_%s_Pix_(%s,%s)' %(roc.number,5,5),
+            plot_dict = {'title':'ROC_%s_Pix_(%s,%s)' %(roc.number,30,30),
+                                'x_title': self.x_title, 'y_title': self.y_title, 'data': roc.pixel(30,30).data}
             self._results.append(plot_dict)
-            roc.pixel(5,5).active = False
-            a_data = numpy.copy(roc.pixel(5,5).data)
+            roc.pixel(30,30).active = False
+            a_data = numpy.copy(roc.pixel(30,30).data)
             #Mask everything below half n_triggers as noise
             below_thresh = (a_data - self.n_triggers/2) < 0
             a_data = numpy.ma.masked_array(a_data, mask=below_thresh)

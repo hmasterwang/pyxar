@@ -101,7 +101,8 @@ class HRTest(test.Test):
             ph_adc = numpy.array(self.dut.ph_array[roc.number])
             ph_vcal = numpy.array(self.dut.ph_cal_array[roc.number])
             PH_ADC = Plotter.create_th1(ph_adc,'PH_ADC_ROC_%s' %roc.number, 'ADC units', '# entries', 0, 255)
-            PH_VCAL = Plotter.create_th1(ph_vcal,'PH_VCAL_ROC_%s' %roc.number, 'Vcal units', '# entries', 0, 255)
+            ##PH_VCAL = Plotter.create_th1(ph_vcal,'PH_VCAL_ROC_%s' %roc.number, 'Vcal units', '# entries', 0, 255)
+            PH_VCAL = Plotter.create_th1(ph_vcal,'PH_VCAL_ROC_%s' %roc.number, 'Vcal units', '# entries', 1, 1785)
             self._histos.append(PH_ADC)
             self._histos.append(PH_VCAL)
 
